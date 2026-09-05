@@ -9,7 +9,6 @@ A simple Unix shell written in C. Supporting command execution and built-in comm
   - `cd` — change the current working directory
   - `exit` — exit the shell
 
-These are planned for future versions.
 
 ## Building
 
