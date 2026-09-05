@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #define BUFF_MAX 1024
 
@@ -19,6 +20,7 @@ char **shell_line(){
 
         if(args == 0){
                 fprintf(stderr, "Couldn't allocate memory for args.\n");
+                perror("Error: ");
                 exit(EXIT_FAILURE);
         }
 
@@ -26,6 +28,7 @@ char **shell_line(){
         while((c=getchar())!='\n' && c != EOF){
                 if(n >= BUFF_MAX){
                         fprintf(stderr, "Too large of a word in your command.\n");
+                        perror("Error: ");
                         exit(EXIT_FAILURE);
                 }
 
@@ -40,6 +43,7 @@ char **shell_line(){
                                         tmp = realloc(args, sizeof(char*) *args_capacity);
                                         if(tmp==0){
                                                 fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
+                                                perror("Error: ");
                                                 exit(EXIT_FAILURE);
                                         }
                                         args = tmp;
@@ -62,6 +66,7 @@ char **shell_line(){
                         tmp = realloc(args, sizeof(char*) *args_capacity);
                         if(tmp==0){
                                 fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
+                                perror("Error: ");
                                 exit(EXIT_FAILURE);
                         }
                         args = tmp;
@@ -73,33 +78,128 @@ char **shell_line(){
         return args;
 }
 
-void shell_loop(void){
-
-        while(1){
-                printf("sHELL >");
-
-                char **args = shell_line();
-                pid_t pid = fork();
-
-                if(pid<0){
-                        fprintf(stderr, "Couldn't fork for some reason.\n");
-                        exit(EXIT_FAILURE);
-                }
-
-                else if(pid==0){
-
-                        int r = execvp(args[0], args);
-                        if(r >=0 || r < 0){
-                                fprintf(stderr, "Couldn't execute this command.\n"
-                                                "Some error Occured\n");
-                        }
-                }
-                else{
-                        wait(NULL);
-                }
-        }
+int shell_exit(char **args){
+        return 2;
 }
 
+
+int shell_cd(char **args){
+        if(args[1] == NULL){
+                fprintf(stderr, "No arguments found.\n");
+                fprintf(stderr, "usage: cd file_path\n");
+                exit(1);
+        }
+
+        else if(chdir(args[1])==-1){
+                fprintf(stderr, "Couldn't change directory.\n");
+                perror("Error: ");
+                exit(1);
+        }
+        return 1;
+}
+
+
+typedef int (*shell_func) (char **args);
+
+int builtin_run(char **args){
+        int exit_flag = 0;
+        char *builtin_commands[] = {"exit", "cd"};
+        int cmds = 2;
+        shell_func cmd_funcs[] = {&shell_exit, &shell_cd};
+
+        for(int i=0; i<cmds; i++){
+                if(strcmp(builtin_commands[i], args[0])==0){
+                        exit_flag = cmd_funcs[i](args);
+                }
+        }
+        return exit_flag;
+}
+
+int shell_run(char **args){
+        
+        pid_t p = fork();
+
+        if(p==-1){
+                fprintf(stderr, "Couldn't create child process.\n");
+                perror("Error: ");
+                return 0;
+        }
+
+        else if(p==0){
+
+                // doesn't return anything on success.
+                if(execvp(args[0] , args)==-1){
+                        fprintf(stderr, "execvp sys call failed.\n");
+                        perror("Error: ");
+                        return 0;
+                }
+        }
+
+        else{
+                wait(NULL);
+        }
+        return 0;
+}
+
+
+int shell_execute(char **args){
+        if(args[0] == NULL){
+                fprintf(stderr, "No command found.\n");
+                return 0;
+        }
+
+        // it returns 1 if the command was builtin , in that case it also run that command.
+        // it returns 2 , if the command was exit.
+        // it returns 0 otherwise.
+
+        int r = builtin_run(args);
+
+        if(r>0){
+                return r;
+        }
+
+        else{
+                 r = shell_run(args);
+        }
+
+        return r;
+}
+
+
+
+
+void shell_loop(void){
+        int status = 0;
+        char ** args = 0;
+        char buffer[1024];
+
+        while(1){
+                if(status==2){
+                        break;
+                }
+
+                if(getcwd(buffer, 1024)==NULL){
+                        fprintf(stderr, "Change Directory error.\n");
+                        perror("Error: ");
+                        continue;
+                }
+                       
+
+                printf("sHELL ");
+                printf("%s > ", buffer);
+
+                args = shell_line();
+                status = shell_execute(args);
+        }
+
+        char ** tmp = args;
+        while(*tmp++ != NULL){
+                free(tmp);
+        }
+        free(args);
+
+        return ;
+}
 
 
 int main(){
@@ -107,3 +207,6 @@ int main(){
         shell_loop();
         return 0;
 }
+
+
+
