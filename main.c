@@ -7,16 +7,22 @@
 
 #define BUFF_MAX 1024
 
+// int shell_exit();
+// int shell_cd();
+int builtin_run(char **args);
 
 char **shell_line(){
 
         char buffer[BUFF_MAX]; // maximum length of a single word .
-        size_t n = 0;
-        size_t n_args = 0;
-        int c = 0;
-        size_t args_capacity = 32;
+        size_t buff_index = 0;
 
-        char** args = malloc(sizeof(char *) * args_capacity);
+        size_t n_tokens = 0;
+        int c = 0;
+        size_t tokens_capacity = 32;
+
+        void *tmp = 0;
+
+        char** args = malloc(sizeof(char *) * tokens_capacity);
 
         if(args == 0){
                 fprintf(stderr, "Couldn't allocate memory for args.\n");
@@ -26,21 +32,21 @@ char **shell_line(){
 
 
         while((c=getchar())!='\n' && c != EOF){
-                if(n >= BUFF_MAX){
+                if(buff_index >= BUFF_MAX){
                         fprintf(stderr, "Too large of a word in your command.\n");
                         perror("Error: ");
                         exit(EXIT_FAILURE);
                 }
 
                 if(c==' ' || c == '\t'){
-                        if (n>0){
-                                buffer[n] = '\0';
+                        if (buff_index>0){
+                                buffer[buff_index] = '\0';
                                 // capacity - 1 below , makes sure that there is always space for NULL.
                                 // at the end of the args.
-                                if(n>=args_capacity-1){     
+                                if(n_tokens>=tokens_capacity-1){     
                                         void * tmp = 0;
-                                        args_capacity *= 2;
-                                        tmp = realloc(args, sizeof(char*) *args_capacity);
+                                        tokens_capacity *= 2;
+                                        tmp = realloc(args, sizeof(char*) *tokens_capacity);
                                         if(tmp==0){
                                                 fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
                                                 perror("Error: ");
@@ -48,22 +54,28 @@ char **shell_line(){
                                         }
                                         args = tmp;
                                 }
-                                args[n_args++] = strdup(buffer);
-                                n = 0;
+                                void *tmp = strdup(buffer);
+                                if(tmp==NULL){
+                                        fprintf(stderr, "Couldn't allocate memory for a argument.\n");
+                                        perror("Error: ");
+                                        exit(1);
+                                }
+                                args[n_tokens++] = tmp;
+                                buff_index = 0;
                         }
                         continue;
                 }
-                buffer[n++] = c;
+                buffer[buff_index++] = c;
         }
 
-        if (n>0){
-                buffer[n] = '\0';
+        if (buff_index>0){
+                buffer[buff_index] = '\0';
                 // capacity - 1 below , makes sure that there is always space for NULL.
                 // at the end of the args.
-                if(n>=args_capacity-1){
+                if(n_tokens>=tokens_capacity-1){
                         void * tmp = 0;
-                        args_capacity *= 2;
-                        tmp = realloc(args, sizeof(char*) *args_capacity);
+                        tokens_capacity *= 2;
+                        tmp = realloc(args, sizeof(char*) *tokens_capacity);
                         if(tmp==0){
                                 fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
                                 perror("Error: ");
@@ -129,7 +141,7 @@ int shell_run(char **args){
 
                 // doesn't return anything on success.
                 if(execvp(args[0] , args)==-1){
-                        fprintf(stderr, "execvp sys call failed.\n");
+                        fprintf(stderr, "execvp syscall failed.\n");
                         perror("Error: ");
                         return 0;
                 }
