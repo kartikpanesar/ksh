@@ -43,7 +43,7 @@ char **shell_line(){
                                 buffer[buff_index] = '\0';
                                 // capacity - 1 below , makes sure that there is always space for NULL.
                                 // at the end of the args.
-                                if(n_tokens>=tokens_capacity-1){     
+                                if(n_tokens>=tokens_capacity-1){
                                         void * tmp = 0;
                                         tokens_capacity *= 2;
                                         tmp = realloc(args, sizeof(char*) *tokens_capacity);
@@ -125,61 +125,67 @@ int shell_execute(char **args){
 }
 
 
-int shell_execute(char **args){
+int shell_run(char **args){
         if(args[0] == NULL){
                 fprintf(stderr, "No command found.\n");
                 return 0;
         }
 
         // it returns 1 if the command was builtin , in that case it also run that command.
-        // it returns 2 , if the command was exit.
+        // it returns -1 , if the command was exit.
         // it returns 0 otherwise.
 
         int r = builtin_run(args);
 
-        if(r>0){
+        // means builtin command ran.
+        if(r!=0){
                 return r;
         }
 
         else{
-                 r = shell_run(args);
+                 r = shell_execute(args);
         }
 
         return r;
 }
 
+void free_args(char **args){
 
+        // freeing the memory for arguments.
+        for(int i=0; args[i]!=NULL; i++){
+                free(args[i]);
+        }
+        free(args);
 
+        return ;
+}
 
 void shell_loop(void){
         int status = 0;
         char ** args = 0;
-        char buffer[1024];
+        char path_name[1024];
 
         while(1){
-                if(status==2){
+                if(status==-1){
                         break;
                 }
 
-                if(getcwd(buffer, 1024)==NULL){
+                if(getcwd(path_name, 1024)==NULL){
                         fprintf(stderr, "Change Directory error.\n");
                         perror("Error: ");
                         continue;
                 }
-                       
 
-                printf("sHELL ");
-                printf("%s > ", buffer);
+                printf("ksh > ");
+                printf("%s > ", path_name);
 
                 args = shell_line();
-                status = shell_execute(args);
+                status = shell_run(args);
+
+                // freeing the memory for arguments.
+                free_args(args);
         }
 
-        char ** tmp = args;
-        while(*tmp++ != NULL){
-                free(tmp);
-        }
-        free(args);
 
         return ;
 }
