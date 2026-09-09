@@ -140,12 +140,21 @@ int shell_execute(cmd* command){
                 }
 
                 if(command->output_file!=0){
-                        int fd2 = open(command->output_file , O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        int fd2 = 0;
+                        if(command->output_append){
+                                fd2 = open(command->output_file, O_WRONLY | O_CREAT | O_APPEND, 06444);
+                        }
+
+                        else{
+                                fd2 = open(command->output_file , O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        }
+
                         if(fd2==-1){
                                 fprintf(stderr, "Couldn't open or create %s\n", command->output_file);
                                 perror("Error: ");
                                 exit(1);
                         }
+
                         if(dup2(fd2, STDOUT_FILENO)==-1){
                                 fprintf(stderr, "Error pointing STDOUT_FILENO to fd.\n");
                                 perror("Error: ");
@@ -241,11 +250,6 @@ void shell_loop(void){
                 }
 
                 free(tokens);
-
-                for(int i=0; command->args[i]!=NULL; i++){
-                        printf("%s\n", command->args[i]);
-                }
-
 
                 status = shell_run(command);
 
