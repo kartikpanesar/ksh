@@ -1,6 +1,6 @@
 # ksh
 
-A simple Unix shell written in C. Supporting command execution and built-in commands.
+A simple Unix shell written in C. Supporting command execution, builtin commands and redirection .
 
 ## Features
 
@@ -8,12 +8,12 @@ A simple Unix shell written in C. Supporting command execution and built-in comm
 - **Built-in commands**:
   - `cd` — change the current working directory
   - `exit` — exit the shell
-- **Redirection Supported** - can redirect input and output of a program .
+- **Redirection** - can redirect input and output of a program .
 
 ## Building
 
 ```bash
-gcc -o ksh ksh.c
+gcc -o ksh main.c builtin.c parser.c command.c
 ```
 
 ## Usage
