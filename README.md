@@ -8,7 +8,7 @@ A simple Unix shell written in C. Supporting command execution and built-in comm
 - **Built-in commands**:
   - `cd` — change the current working directory
   - `exit` — exit the shell
-
+- **Redirection Supported** - can redirect input and output of a program .
 
 ## Building
 
@@ -25,9 +25,11 @@ gcc -o ksh ksh.c
 Once running, ksh presents a prompt where you can type commands just like in `bash` or `sh`:
 
 ```
-ksh> ls -la
-ksh> cd Documents
-ksh> exit
+ksh > ls -la
+ksh > cd Documents
+ksh > exit
+ksh > ls -l > list.txt
+ksh > wc < essay.txt
 ```
 
 ## How It Works
@@ -43,7 +45,7 @@ At a high level, ksh:
 ## Future Improvements
 
 - [ ] Pipe support (`cmd1 | cmd2`)
-- [ ] Output redirection (`>`, `>>`)
-- [ ] Input redirection (`<`)
+- [x] Output redirection (`>`, `>>`)
+- [x] Input redirection (`<`)
 - [ ] Additional built-ins (`pwd`, `history`, etc.)
 
