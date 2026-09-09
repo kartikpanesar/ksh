@@ -4,12 +4,25 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <fcntl.h>
+
 
 #define BUFF_MAX 1024
 
-// int shell_exit();
-// int shell_cd();
-int builtin_run(char **args);
+
+typedef struct command {
+        char **args;
+        char *input_file;
+        char *output_file;
+        int output_append;
+} cmd;
+
+cmd* cmd_init();
+
+int is_builtin(cmd* command);
+int builtin_run(cmd* command);
+int parsed_input(char **tokens, cmd* command);
+
 
 char **shell_line(){
 
@@ -98,7 +111,7 @@ char **shell_line(){
 
 
 
-int shell_execute(char **args){
+int shell_execute(cmd* command){
         
         pid_t p = fork();
 
@@ -110,12 +123,41 @@ int shell_execute(char **args){
 
         else if(p==0){
 
-                // doesn't return anything on success.
-                if(execvp(args[0] , args)==-1){
-                        fprintf(stderr, "execvp syscall failed.\n");
-                        perror("Error: ");
-                        return 0;
+                if(command->input_file!=0){
+                        int fd1 = open(command->input_file, O_RDONLY );
+                        if(fd1==-1){
+                                fprintf(stderr, "Couldn't open %s\n", command->input_file);
+                                perror("Error: ");
+                                exit(1);
+                        }
+
+                        if(dup2(fd1, STDIN_FILENO)==-1){
+                                fprintf(stderr, "error pointing STDIN_FILENO to fd.\n");
+                                perror("Error: ");
+                                exit(1);
+                        }
+                        close(fd1);
                 }
+
+                if(command->output_file!=0){
+                        int fd2 = open(command->output_file , O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        if(fd2==-1){
+                                fprintf(stderr, "Couldn't open or create %s\n", command->output_file);
+                                perror("Error: ");
+                                exit(1);
+                        }
+                        if(dup2(fd2, STDOUT_FILENO)==-1){
+                                fprintf(stderr, "Error pointing STDOUT_FILENO to fd.\n");
+                                perror("Error: ");
+                                exit(1);
+                        }
+                        close(fd2);
+                }
+
+                execvp(command->args[0], command->args);
+                fprintf(stderr, "execvp_error: ;Couldn't execute command.\n");
+                perror("Error: ");
+                exit(1);
         }
 
         else{
@@ -125,50 +167,60 @@ int shell_execute(char **args){
 }
 
 
-int shell_run(char **args){
-        if(args[0] == NULL){
+int shell_run(cmd* command){
+        if(command->args[0] == NULL){
                 fprintf(stderr, "No command found.\n");
                 return 0;
         }
 
-        // it returns 1 if the command was builtin , in that case it also run that command.
-        // it returns -1 , if the command was exit.
-        // it returns 0 otherwise.
+        // result is 0 , if command ran successfully.
+        // 1 , if it failed.
+        // -1 , if the command was exit.
 
-        int r = builtin_run(args);
+        int result = 0;
 
-        // means builtin command ran.
-        if(r!=0){
-                return r;
+        if(is_builtin(command)){
+                result = builtin_run(command);
         }
 
         else{
-                 r = shell_execute(args);
+                 result = shell_execute(command);
         }
 
-        return r;
+        return result;
 }
 
-void free_args(char **args){
+void free_tokens(char **tokens){
 
         // freeing the memory for arguments.
-        for(int i=0; args[i]!=NULL; i++){
-                free(args[i]);
+        for(int i=0; tokens[i]!=NULL; i++){
+                free(tokens[i]);
         }
-        free(args);
+        free(tokens);
 
         return ;
 }
 
+void free_command(cmd *command){
+        for(int i=0; command->args[i]!=NULL; i++){
+                free(command->args[i]);
+        }
+        free(command);
+}
+
+
 void shell_loop(void){
         int status = 0;
-        char ** args = 0;
         char path_name[1024];
+
+        char ** tokens = 0;
+        cmd *command = 0;
 
         while(1){
                 if(status==-1){
                         break;
                 }
+
 
                 if(getcwd(path_name, 1024)==NULL){
                         fprintf(stderr, "Change Directory error.\n");
@@ -179,11 +231,25 @@ void shell_loop(void){
                 printf("ksh > ");
                 printf("%s > ", path_name);
 
-                args = shell_line();
-                status = shell_run(args);
 
-                // freeing the memory for arguments.
-                free_args(args);
+                tokens = shell_line();
+                command = cmd_init();
+
+                if(parsed_input(tokens, command)==-1){
+                        printf("couldn't create command.\n");
+                        continue;
+                }
+
+                free(tokens);
+
+                for(int i=0; command->args[i]!=NULL; i++){
+                        printf("%s\n", command->args[i]);
+                }
+
+
+                status = shell_run(command);
+
+                free_command(command);
         }
 
 
