@@ -2,21 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-
-typedef struct command {
-        char **args;
-        char *input_file;
-        char *output_file;
-        int output_append;
-} cmd;
-
-cmd* cmd_init();
+#include "command.h"
 
 
 // re-direction operators
 static char *r_operators[3] = {"<", ">", ">>"};
 
-int is_r_operator(char *string){
+static int is_r_operator(char *string){
         for(int i=0; i<3; i++){
                 if(strcmp(string, r_operators[i])==0){
                         return 1;
@@ -26,7 +18,12 @@ int is_r_operator(char *string){
 }
 
 
-int parsed_input(char **tokens, cmd *command)
+// int parse_input_pipe(char **tokens){
+//         return 0;
+// }
+
+
+int parse_input_redirection(char **tokens, cmd *command)
 {
         char ** args;
 

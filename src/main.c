@@ -6,22 +6,11 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include "builtin.h"
+#include "command.h"
+#include "parser.h"
 
 #define BUFF_MAX 1024
-
-
-typedef struct command {
-        char **args;
-        char *input_file;
-        char *output_file;
-        int output_append;
-} cmd;
-
-cmd* cmd_init();
-
-int is_builtin(cmd* command);
-int builtin_run(cmd* command);
-int parsed_input(char **tokens, cmd* command);
 
 
 char **shell_line(){
@@ -57,7 +46,7 @@ char **shell_line(){
                                 // capacity - 1 below , makes sure that there is always space for NULL.
                                 // at the end of the args.
                                 if(n_tokens>=tokens_capacity-1){
-                                        void * tmp = 0;
+                                        tmp = 0;
                                         tokens_capacity *= 2;
                                         tmp = realloc(args, sizeof(char*) *tokens_capacity);
                                         if(tmp==0){
@@ -67,7 +56,7 @@ char **shell_line(){
                                         }
                                         args = tmp;
                                 }
-                                void *tmp = strdup(buffer);
+                                tmp = strdup(buffer);
                                 if(tmp==NULL){
                                         fprintf(stderr, "Couldn't allocate memory for a argument.\n");
                                         perror("Error: ");
@@ -86,7 +75,7 @@ char **shell_line(){
                 // capacity - 1 below , makes sure that there is always space for NULL.
                 // at the end of the args.
                 if(n_tokens>=tokens_capacity-1){
-                        void * tmp = 0;
+                        tmp = 0;
                         tokens_capacity *= 2;
                         tmp = realloc(args, sizeof(char*) *tokens_capacity);
                         if(tmp==0){
@@ -96,7 +85,7 @@ char **shell_line(){
                         }
                         args = tmp;
                 }
-                void *tmp = strdup(buffer);
+                tmp = strdup(buffer);
                 if(tmp == NULL){
                         fprintf(stderr, "Couldn't allocate memory for a argument.\n");
                         perror("Error: ");
@@ -244,7 +233,7 @@ void shell_loop(void){
                 tokens = shell_line();
                 command = cmd_init();
 
-                if(parsed_input(tokens, command)==-1){
+                if(parse_input_redirection(tokens, command)==-1){
                         printf("couldn't create command.\n");
                         continue;
                 }

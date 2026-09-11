@@ -3,13 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 
-typedef struct command {
-        char **args;
-        char *input_file;
-        char *output_file;
-        int output_append;
-} cmd;
-
+#include <command.h>
 
 
 static char *builtin_commands[] = {"exit", "cd", NULL};
