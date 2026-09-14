@@ -1,6 +1,6 @@
 # ksh
 
-A simple Unix shell written in C. Supporting command execution, builtin commands and redirection .
+A simple Unix shell written in C. Supporting command execution, builtin commands, redirection and pipe support .
 
 ## Features
 
@@ -8,12 +8,17 @@ A simple Unix shell written in C. Supporting command execution, builtin commands
 - **Built-in commands**:
   - `cd` — change the current working directory
   - `exit` — exit the shell
-- **Redirection** - can redirect input and output of a program .
+- **Redirection** - can redirect input and output of a program. (`ls -l > list.txt`)
+- **Pipes** - supports pipes for connecting each command's stdout to the next command's stdin. (`cmd1 | cmd2 | cmd3`)
 
 ## Building
 
+Clone the repository and run 'make' from the project root:
+
 ```bash
-gcc -o ksh main.c builtin.c parser.c command.c
+git clone https://github.com/kartikpanesar/ksh.git
+cd ksh
+make
 ```
 
 ## Usage
@@ -30,6 +35,7 @@ ksh > cd Documents
 ksh > exit
 ksh > ls -l > list.txt
 ksh > wc < essay.txt
+ksh > ls -l | wc -l
 ```
 
 ## How It Works
@@ -44,7 +50,7 @@ At a high level, ksh:
 
 ## Future Improvements
 
-- [ ] Pipe support (`cmd1 | cmd2`)
+- [x] Pipe support (`cmd1 | cmd2`)
 - [x] Output redirection (`>`, `>>`)
 - [x] Input redirection (`<`)
 - [ ] Additional built-ins (`pwd`, `history`, etc.)
