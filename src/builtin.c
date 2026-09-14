@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <errno.h>
 #include <command.h>
 
 
@@ -30,20 +30,29 @@ int shell_cd(cmd* command){
         if(command->args[1] == NULL){
                 fprintf(stderr, "No arguments found.\n");
                 fprintf(stderr, "usage: cd file_path\n");
-                exit(1);
+                return 1;
         }
 
         else if(chdir(command->args[1])==-1){
                 fprintf(stderr, "Couldn't change directory.\n");
                 perror("Error: ");
+                return 1;
         }
-        return 1;
+        return 0;
 }
 
 
+int is_single_builtin(cmd **cmds, int n){
+        if(n==1){
+                if(is_builtin(cmds[0])){
+                        return 1;
+                }
+        }
+        return 0;
+}
+
 
 typedef int (*shell_func) (cmd* command);
-
 
 int builtin_run(cmd* command){
 
@@ -54,6 +63,7 @@ int builtin_run(cmd* command){
         for(int i=0; builtin_commands[i]!=NULL; i++){
                 if(strcmp(builtin_commands[i], command->args[0])==0){
                         exit_flag = cmd_funcs[i](command);
+                        break;
                 }
         }
 

@@ -3,6 +3,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-int parse_input_redirection(char** tokens, cmd* command);
+char **shell_line();
+int parse_input_pipe(char **tokens);
 
 #endif

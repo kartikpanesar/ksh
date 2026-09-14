@@ -1,0 +1,50 @@
+[
+  {
+    "file": "src/builtin.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-Iinclude",
+      "-c",
+      "src/builtin.c",
+      "-o",
+      "obj/builtin.o"
+    ],
+    "directory": "/home/kartik/projects/ksh",
+    "output": "obj/builtin.o"
+  },
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-Iinclude",
+      "-c",
+      "src/main.c",
+      "-o",
+      "obj/main.o"
+    ],
+    "directory": "/home/kartik/projects/ksh",
+    "output": "obj/main.o"
+  },
+  {
+    "file": "src/parser.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-Iinclude",
+      "-c",
+      "src/parser.c",
+      "-o",
+      "obj/parser.o"
+    ],
+    "directory": "/home/kartik/projects/ksh",
+    "output": "obj/parser.o"
+  }
+]

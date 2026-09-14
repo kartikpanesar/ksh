@@ -10,158 +10,55 @@
 #include "command.h"
 #include "parser.h"
 
-#define BUFF_MAX 1024
 
 
-char **shell_line(){
 
-        char buffer[BUFF_MAX]; // maximum length of a single word .
-        size_t buff_index = 0;
-
-        size_t n_tokens = 0;
-        int c = 0;
-        size_t tokens_capacity = 32;
-
-        void *tmp = 0;
-
-        char** args = malloc(sizeof(char *) * tokens_capacity);
-
-        if(args == 0){
-                fprintf(stderr, "Couldn't allocate memory for args.\n");
-                perror("Error: ");
-                exit(EXIT_FAILURE);
-        }
-
-
-        while((c=getchar())!='\n' && c != EOF){
-                if(buff_index >= BUFF_MAX){
-                        fprintf(stderr, "Too large of a word in your command.\n");
-                        perror("Error: ");
-                        exit(EXIT_FAILURE);
-                }
-
-                if(c==' ' || c == '\t'){
-                        if (buff_index>0){
-                                buffer[buff_index] = '\0';
-                                // capacity - 1 below , makes sure that there is always space for NULL.
-                                // at the end of the args.
-                                if(n_tokens>=tokens_capacity-1){
-                                        tmp = 0;
-                                        tokens_capacity *= 2;
-                                        tmp = realloc(args, sizeof(char*) *tokens_capacity);
-                                        if(tmp==0){
-                                                fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
-                                                perror("Error: ");
-                                                exit(EXIT_FAILURE);
-                                        }
-                                        args = tmp;
-                                }
-                                tmp = strdup(buffer);
-                                if(tmp==NULL){
-                                        fprintf(stderr, "Couldn't allocate memory for a argument.\n");
-                                        perror("Error: ");
-                                        exit(1);
-                                }
-                                args[n_tokens++] = tmp;
-                                buff_index = 0;
-                        }
-                        continue;
-                }
-                buffer[buff_index++] = c;
-        }
-
-        if (buff_index>0){
-                buffer[buff_index] = '\0';
-                // capacity - 1 below , makes sure that there is always space for NULL.
-                // at the end of the args.
-                if(n_tokens>=tokens_capacity-1){
-                        tmp = 0;
-                        tokens_capacity *= 2;
-                        tmp = realloc(args, sizeof(char*) *tokens_capacity);
-                        if(tmp==0){
-                                fprintf(stderr, "Couldn't allocate memory for arguments of command.\n");
-                                perror("Error: ");
-                                exit(EXIT_FAILURE);
-                        }
-                        args = tmp;
-                }
-                tmp = strdup(buffer);
-                if(tmp == NULL){
-                        fprintf(stderr, "Couldn't allocate memory for a argument.\n");
+void shell_execute(cmd* command){
+        
+        if(command->input_file!=0){
+                int fd1 = open(command->input_file, O_RDONLY );
+                if(fd1==-1){
+                        fprintf(stderr, "Couldn't open %s\n", command->input_file);
                         perror("Error: ");
                         exit(1);
                 }
-                args[n_tokens++] = tmp;
-        }
-        args[n_tokens] = NULL;
 
-        return args;
-}
-
-
-
-int shell_execute(cmd* command){
-        
-        pid_t p = fork();
-
-        if(p==-1){
-                fprintf(stderr, "Couldn't create child process.\n");
-                perror("Error: ");
-                return 0;
+                if(dup2(fd1, STDIN_FILENO)==-1){
+                        fprintf(stderr, "error pointing STDIN_FILENO to fd.\n");
+                        perror("Error: ");
+                        exit(1);
+                }
+                close(fd1);
         }
 
-        else if(p==0){
-
-                if(command->input_file!=0){
-                        int fd1 = open(command->input_file, O_RDONLY );
-                        if(fd1==-1){
-                                fprintf(stderr, "Couldn't open %s\n", command->input_file);
-                                perror("Error: ");
-                                exit(1);
-                        }
-
-                        if(dup2(fd1, STDIN_FILENO)==-1){
-                                fprintf(stderr, "error pointing STDIN_FILENO to fd.\n");
-                                perror("Error: ");
-                                exit(1);
-                        }
-                        close(fd1);
+        if(command->output_file!=0){
+                int fd2 = 0;
+                if(command->output_append){
+                        fd2 = open(command->output_file, O_WRONLY | O_CREAT | O_APPEND, 06444);
                 }
 
-                if(command->output_file!=0){
-                        int fd2 = 0;
-                        if(command->output_append){
-                                fd2 = open(command->output_file, O_WRONLY | O_CREAT | O_APPEND, 06444);
-                        }
-
-                        else{
-                                fd2 = open(command->output_file , O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                        }
-
-                        if(fd2==-1){
-                                fprintf(stderr, "Couldn't open or create %s\n", command->output_file);
-                                perror("Error: ");
-                                exit(1);
-                        }
-
-                        if(dup2(fd2, STDOUT_FILENO)==-1){
-                                fprintf(stderr, "Error pointing STDOUT_FILENO to fd.\n");
-                                perror("Error: ");
-                                exit(1);
-                        }
-                        close(fd2);
+                else{
+                        fd2 = open(command->output_file , O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 }
 
-                execvp(command->args[0], command->args);
-                fprintf(stderr, "execvp_error: ;Couldn't execute command.\n");
-                perror("Error: ");
-                exit(1);
+                if(fd2==-1){
+                        fprintf(stderr, "Couldn't open or create %s\n", command->output_file);
+                        perror("Error: ");
+                        exit(1);
+                }
+
+                if(dup2(fd2, STDOUT_FILENO)==-1){
+                        fprintf(stderr, "Error pointing STDOUT_FILENO to fd.\n");
+                        perror("Error: ");
+                        exit(1);
+                }
+                close(fd2);
         }
 
-        else{
-                wait(NULL);
-        }
-        return 0;
+        execvp(command->args[0], command->args);
+        fprintf(stderr, "execvp_error: ;Couldn't execute command.\n");
+        perror("Error: ");
+        exit(1);
 }
 
 
@@ -182,11 +79,121 @@ int shell_run(cmd* command){
         }
 
         else{
-                 result = shell_execute(command);
+                 shell_execute(command);
         }
 
         return result;
 }
+
+
+int shell_run_cmds(cmd **cmds, int n)
+{
+        // int status = 0;
+        pid_t pids[n];
+
+        // creating n-1 pipes.
+        int pipes[n-1][2];
+        for(int k=0; k<n-1; k++){
+                if(pipe(pipes[k])==-1){
+                        fprintf(stderr, "Couldn't create a pipe.\n");
+                        perror("Error: ");
+                }
+        }
+
+        // if it is a single builtin command, run it before forking.
+        if(is_single_builtin(cmds, n)){
+                return shell_run(cmds[0]);
+        }
+
+
+        for(int k=0; k<n; k++){
+                pids[k] = fork();
+
+                if(pids[k]<0){
+                        fprintf(stderr, "Error forking.\n");
+                        perror("Error: ");
+                        exit(1);
+                }
+
+                else if(pids[k]==0){
+
+                        // if there is only single command, NO PIPES.
+                        if(n==1){
+                                shell_run(cmds[0]);
+                                return 0;
+                        }
+
+                        if(k==0){
+                                if(dup2(pipes[k][1], STDOUT_FILENO)==-1){
+                                        perror("Error in dup2: ");
+                                        exit(1);
+                                }
+
+                                // close all the pipe ends of all the pipes.
+                                for(int i=0; i<n-1; i++){
+                                        close(pipes[i][0]);
+                                        close(pipes[i][1]);
+                                }
+                                shell_run(cmds[k]);
+                        }
+                        else if(k==n-1){
+                                if(dup2(pipes[k-1][0], STDIN_FILENO)==-1){
+                                        perror("Error in dup2: ");
+                                        exit(1);
+                                }
+
+                                // close all the pipe ends of all the pipes.
+                                for(int i=0; i<n-1; i++){
+                                        close(pipes[i][0]);
+                                        close(pipes[i][1]);
+                                }
+
+                                shell_run(cmds[k]);
+                        }
+                        else{
+                                if(dup2(pipes[k-1][0], STDIN_FILENO)==-1){
+                                        perror("Error in dup2: ");
+                                        exit(1);
+                                }
+
+                                if(dup2(pipes[k][1], STDOUT_FILENO)==-1){
+                                        perror("Error in dup2: ");
+                                        exit(1);
+                                }
+                                
+                                // close all the pipe ends of all the pipes.
+                                for(int i=0; i<n-1; i++){
+                                        close(pipes[i][0]);
+                                        close(pipes[i][1]);
+                                }
+
+                                shell_run(cmds[k]);
+                        }
+                }
+
+        }
+
+        // Parent Process.
+
+        // if pipes exist.
+        if(n>1){
+                // close all the pipe ends of all the pipes.
+                for(int j=0; j<n-1; j++){
+                        close(pipes[j][0]);
+                        close(pipes[j][1]);
+                }
+        }
+
+
+        // Wait for all the children.
+        for(int i=0; i<n; i++){
+                waitpid(pids[i], NULL, 0);
+        }
+
+
+        return 0;
+}
+
 
 void free_tokens(char **tokens){
 
@@ -212,7 +219,11 @@ void shell_loop(void){
         char path_name[1024];
 
         char ** tokens = 0;
-        cmd *command = 0;
+
+        int n_cmds = 0;
+
+        int pipedes[2] = {0};
+        pipe(pipedes);
 
         while(1){
                 if(status==-1){
@@ -231,20 +242,26 @@ void shell_loop(void){
 
 
                 tokens = shell_line();
-                command = cmd_init();
+                n_cmds = parse_input_pipe(tokens) ;
 
-                if(parse_input_redirection(tokens, command)==-1){
-                        printf("couldn't create command.\n");
+                if(n_cmds == -1){
+                        fprintf(stderr, "Error parsing the input.\n");
+                        free_tokens(tokens);
                         continue;
                 }
 
-                free(tokens);
+                n_cmds += 1;
 
-                status = shell_run(command);
+                free_tokens(tokens);
 
-                free_command(command);
+                status = shell_run_cmds(cmds, n_cmds);
+
+
+                for(int i=0; cmds[i]!=NULL; i++){
+                        free_command(cmds[i]);
+                }
+                free(cmds);
         }
-
 
         return ;
 }
@@ -253,6 +270,7 @@ void shell_loop(void){
 int main(){
 
         shell_loop();
+
         return 0;
 }
 

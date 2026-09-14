@@ -9,8 +9,10 @@ typedef struct command{
         int output_append;
 } cmd;
 
+extern cmd **cmds;
+
 cmd* cmd_init(void);
 
-cmd* cmd_destroy(cmd *command);
+void cmd_destroy(cmd *command);
 
 #endif
